@@ -1,0 +1,17 @@
+#prepare directories
+sudo mkdir /app
+sudo mkdir /app/journal
+sudo mkdir /app/journal/wp
+sudo mkdir /app/journal/wp/wpcontent
+sudo mkdir /app/journal/mysql
+sudo mkdir /app/journal/mysql/conf
+sudo mkdir /app/journal/mysql/data
+sudo mkdir /app/journal/traefik
+sudo mkdir /app/journal/traefik/conf
+sudo mkdir /app/journal/traefik/certs
+#wordpress
+sudo docker service create --name wpapp --network web --label traefik.enable=true --label traefik.backend=wpapp --label traefik.port=80 --label traefik.frontend.rule=Host:journal.mach5.web.id --label traefik.backend.loadbalancer.stickiness=true --mount type=bind,source=/app/journal/wp/wpcontent,target=/var/www/html --env="WORDPRESS_DB_HOST=wpdb" --env="WORDPRESS_DB_NAME=journaldb" --env="WORDPRESS_DB_USER=wpuser" --env="WORDPRESS_DB_PASSWORD=thepassword" wordpress
+#mysql
+sudo docker service create --name wpdb --network web --constraint node.labels.name==dm1 --mount type=bind,source=/app/journal/mysql/data,target=/var/lib/mysql --env="MYSQL_ROOT_PASSWORD=123456" mysql
+#traefik
+sudo docker service create --name traefik --constraint=node.role==manager --publish 443:443 --publish 8080:8080 --mount type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock  --mount type=bind,source=/app/journal/traefik/conf/traefik.toml,target=/traefik.toml --mount type=bind,source=/app/journal/traefik/conf,target=/conf --mount type=bind,source=/app/journal/traefik/certs/,target=/certs --network web traefik
